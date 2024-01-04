@@ -64,6 +64,165 @@ const App: any = () => {
         setRandomDice([...randomDice])
     }
 
+    const appendScore = (score: number, key: string) => {
+        playerScore[nowPlayer][key].score = score
+        playerScore[nowPlayer][key].enable = false
+
+    }
+
+    const getTopCategoriesScore = (num: number) => {
+        const pickDices = playerDice[nowPlayer].pick
+        const score = pickDices.filter((x: number) => x == num).length * num
+        return score
+    }
+
+    const calculateScore = () => {
+        const pickDices = playerDice[nowPlayer].pick
+        const categories = ["aces", "deuces", "threes", "fours", "fives", "sixes", "bonus", "choice", "fourofakind", "fullhouse", "sstraight", "lstraight", "yacht"]
+        // ["aces", "deuces", "threes", "fours", "fives", "sixes", "bonus", "choice", "fullhouse", "fourofakind", "sstraight", "lstraight", "yacht"]
+
+        const calculate: any = {
+            "aces": (title: string) => {
+                const score = getTopCategoriesScore(1)
+                appendScore(score, title)
+            },
+            "deuces": (title: string) => {
+                const score = getTopCategoriesScore(2)
+                appendScore(score, title)
+            },           
+            "threes": (title: string) => {
+                const score = getTopCategoriesScore(3)
+                appendScore(score, title)
+            },            
+            "fours": (title: string) => {
+                const score = getTopCategoriesScore(4)
+                appendScore(score, title)
+            },            
+            "fives": (title: string) => {
+                const score = getTopCategoriesScore(5)
+                appendScore(score, title)
+            },           
+            "sixes": (title: string) => {
+                const score = getTopCategoriesScore(6)
+                appendScore(score, title)
+            },
+            "bonus": (title: string) => {
+                const score = 0
+                appendScore(score, title)
+            },
+            "choice": (title: string) => {
+                const score = pickDices.reduce((x: number, y: number) => {
+                    return x + y
+                }, 0)
+
+                appendScore(score, title)
+            },
+            "fourofakind": (title: string) => {
+                let score = 0
+                for (let index = 0; index < pickDices.length; index++) {
+                    const count = pickDices.filter((x: number) => x == pickDices[index]).length
+                    if (count >= 4) {
+                        score = pickDices.reduce((x: number, y: number) => {
+                            return x + y
+                        }, 0)
+                        appendScore(score, title)
+                        return true
+                    }
+                }
+
+                appendScore(score, title)
+            },
+            "fullhouse": (title: string) => {
+                let score = 0
+                for (let index = 0; index < pickDices.length; index++) {
+                    const count = pickDices.filter((x: number) => x == pickDices[index]).length
+                    if (count == 3) {
+
+                        for (let indexLast = 0; indexLast < pickDices.length; indexLast++) {
+                            const count = pickDices.filter((x: number) => x == pickDices[indexLast]).length
+                            if (count == 2) {
+                                score = pickDices.reduce((x: number, y: number) => {
+                                    return x + y
+                                }, 0)
+                                appendScore(score, title)
+                                return true
+                            }
+                        }
+
+                    }
+                }
+
+                appendScore(score, title)
+            },
+
+            "sstraight": (title: string) => {
+                const sortDices = pickDices.sort()
+                let startPoint = 0
+                let streak = 0
+
+                for (let index = 0; index < sortDices.length; index++) {
+                    if (sortDices[index] != 0) {
+                        if (startPoint + 1 == sortDices[index]) {
+                            startPoint += 1
+                            streak += 1
+                            if (streak >= 4) {
+                                break
+                            }
+                        } else {
+                            startPoint = sortDices[index]
+                            streak = 1
+                        }
+                    }
+                }
+
+                appendScore(streak >= 4 ? 15 : 0, title)
+            },
+            
+            "lstraight": (title: string) => {
+                const sortDices = pickDices.sort()
+                let startPoint = 0
+                let streak = 0
+
+                for (let index = 0; index < sortDices.length; index++) {
+                    if (sortDices[index] != 0) {
+                        if (startPoint + 1 == sortDices[index]) {
+                            startPoint += 1
+                            streak += 1
+                            if (streak == 5) {
+                                break
+                            }
+                        } else {
+                            startPoint = sortDices[index]
+                            streak = 1
+                        }
+                    }
+                }
+
+                appendScore(streak == 5 ? 30 : 0, title)
+            },
+
+            "yacht": (title: string) => {
+                let isYacht = true
+                for (let index = 0; index < pickDices.length; index++) {
+                    if (pickDices[index] != 0) {
+                        if (pickDices[0] != pickDices[index]) {
+                            isYacht = false
+                        }
+                    }
+                }
+                const score = isYacht ? 50 : 0
+                appendScore(score, title)
+            },
+        }
+
+        for (let index = 0; index < categories.length; index++) {
+            const title = categories[index]
+            calculate[title](title)
+
+        }
+    }
+
+
 
     const handleClickRandomButton = () => {
         const diceLength = playerDice[nowPlayer].pick.filter((x: number) => x == 0).length
@@ -80,6 +239,7 @@ const App: any = () => {
     const handleClickRandomDice = (num: number, randomDiceIndex: number) => {
         randomDice[randomDiceIndex] = 0
         appendNumberInPlayerDice(num)
+        calculateScore()
     }
 
     const handleClickPickDice = (index: number) => {
@@ -88,6 +248,7 @@ const App: any = () => {
 
         setPlayerDice([...playerDice])
         appendNumberInRandomDice(thisDiceNumber)
+        calculateScore()
     }
 
     useEffect(() => {
