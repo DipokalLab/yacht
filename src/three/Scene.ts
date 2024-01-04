@@ -12,7 +12,14 @@ class Scene {
     controls: any
     blocks: any
     world: CANNON.World;
-    dice: { model: any; body: CANNON.Body; };
+    dice: { model: any; body: CANNON.Body; direction?: {
+        one: THREE.Mesh,
+        two: any,
+        three: any,
+        four: any,
+        five: any,
+        six: any,
+    } }[];
 
     constructor() {
 
@@ -61,16 +68,20 @@ class Scene {
     
         this.controls = new OrbitControls( this.camera, this.renderer.domElement );
 
-        this.getDice()
-
-        this.dice = {
-            model: undefined,
-            body: undefined
+        for (let index = 0; index < 1; index++) {
+            this.getDice()
+            
         }
+
+        this.dice = []
 
         this.world = new CANNON.World({
             gravity: new CANNON.Vec3(0, -9.82, 0),
         })
+
+        this.world.defaultContactMaterial.restitution = 0.3;
+        this.world.allowSleep = true
+
 
         const floorBody = new CANNON.Body({
             type: CANNON.Body.STATIC, 
@@ -93,31 +104,57 @@ class Scene {
         const loader = new GLTFLoader();
 
         loader.load( '/public/dice.glb', ( gltf ) => {
+            this.dice.push({
+                model: undefined,
+                body: undefined,
+                // direction: {
+                //     one: undefined,
+                //     two: undefined,
+                //     three: undefined,
+                //     four: undefined,
+                //     five: undefined,
+                //     six: undefined,
+                // }
+            })
+            
             const scale = 0.6
             const model = gltf.scene
             model.scale.set(scale, scale, scale)
             model.rotation.set(
-                Math.random() * Math.PI,
+                Math.random() * Math.PI / 2,
                 0,
-                Math.random() * Math.PI
+                Math.random() * Math.PI / 2
             )
 
-            this.dice.body = new CANNON.Body({
+
+            this.dice[this.dice.length - 1].body = new CANNON.Body({
                 mass: 0.3,
                 shape: new CANNON.Box(new CANNON.Vec3(0.6, 0.6, 0.6)),
                 position: new CANNON.Vec3(0, 10, 0),
+                sleepTimeLimit: 0.02,
+                sleepSpeedLimit: 0.2
             });
 
-            this.dice.body.quaternion.copy(new CANNON.Quaternion(model.quaternion.x,model.quaternion.y,model.quaternion.z,model.quaternion.w))
-            this.dice.body.applyImpulse(
-                new CANNON.Vec3(-Math.random() * 3, Math.random() * 3, 0),
+            this.dice[this.dice.length - 1].body.allowSleep = true
+
+            this.dice[this.dice.length - 1].body.quaternion.copy(new CANNON.Quaternion(model.quaternion.x,model.quaternion.y,model.quaternion.z,model.quaternion.w))
+            this.dice[this.dice.length - 1].body.applyImpulse(
+                new CANNON.Vec3(-Math.random() * 1, Math.random() * 1, 0),
                 new CANNON.Vec3(0, 0, 0.2)
             );
-            this.world.addBody(this.dice.body);
+            this.world.addBody(this.dice[this.dice.length - 1].body);
 
             this.scene.add( model );
-            this.dice.model = model
-            
+            this.dice[this.dice.length - 1].model = model
+
+            this.dice[this.dice.length - 1].body.addEventListener("sleep", (e: any) => {
+                this.dice[this.dice.length - 1].body.allowSleep = false
+
+                const rotation = new CANNON.Vec3()
+                e.target.quaternion.toEuler(rotation)
+                const num = this.getDiceNumber(rotation)
+                console.log(num)
+            })
 
         }, undefined, function ( error ) {
 
@@ -126,13 +163,43 @@ class Scene {
         } );
     }
 
+    getDiceNumber(rotation: any) {
+        const errorRate = 0.2
+        // https://codepen.io/ksenia-k/pen/QWZVvxm?editors=1010
+        // NOTE: 빠르게 개발하기 위해 가져다 씀. 나중에 리팩토링 할 예정.
+        let isZero = (angle: any) => Math.abs(angle) < errorRate;
+        let isHalfPi = (angle: any) => Math.abs(angle - 0.5 * Math.PI) < errorRate;
+        let isMinusHalfPi = (angle: any) => Math.abs(0.5 * Math.PI + angle) < errorRate;
+        let isPiOrMinusPi = (angle: any) => Math.abs(Math.PI - angle) < errorRate || Math.abs(Math.PI + angle) < errorRate;
+    
+        if (isZero(rotation.z)) {
+            if (isZero(rotation.x)) {
+                return 6
+            } else if (isHalfPi(rotation.x)) {
+                return 2
+            } else if (isMinusHalfPi(rotation.x)) {
+                return 4
+            } else if (isPiOrMinusPi(rotation.x)) {
+                return 5
+            }
+        } else if (isHalfPi(rotation.z)) {
+            return 1
+        } else if (isMinusHalfPi(rotation.z)) {
+            return 3
+        }
+    }
+
     animate() {
         requestAnimationFrame( this.animate.bind(this) );
 
         this.world.fixedStep()
-        this.dice.model.position.copy(this.dice.body.position);
-        this.dice.model.quaternion.copy(this.dice.body.quaternion);
+        for (let index = 0; index < this.dice.length; index++) {
+            this.dice[index].model.position.copy(this.dice[index].body.position);
+            this.dice[index].model.quaternion.copy(this.dice[index].body.quaternion);
 
+            // console.log(this.dice[index].model.rotation.x)
+
+        }
 
         this.renderer.render( this.scene, this.camera );
     }
