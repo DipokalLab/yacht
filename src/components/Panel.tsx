@@ -12,6 +12,7 @@ function Panel({ children }: PanelType) {
         <div css={css({
             display: "flex",
             position: "absolute",
+            overflow: "scroll",
             top: "0",
             left: "0",
             width: "30vw",

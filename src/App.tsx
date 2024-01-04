@@ -9,7 +9,7 @@ import { Dice } from './components/Dice';
 
 
 const App: any = () => {
-    const [nowTurn, setNowTurn] = useState(0)
+    const [nowTurn, setNowTurn] = useState(1)
     const [nowPlayer, setNowPlayer] = useState(0)
     const [randomDice, setRandomDice] = useState<number[]>([])
     const [playerScore, setPlayerScore] = useState<any>([])
@@ -257,6 +257,21 @@ const App: any = () => {
         setPlayerTotalScore([...playerTotalScore])
     }
 
+    const nextPlayer = () => {
+        const maxPlayerCount = playerScore.length
+        if (nowPlayer + 1 > maxPlayerCount - 1) {
+            setNowPlayer(0)
+            setNowTurn((turn) => turn = nowTurn + 1)
+            return false
+        }
+
+        setNowPlayer(nowPlayer + 1)
+    }
+
+
+    const handleClickAddPlayerButton = () => {
+        initPlayerScore()
+    }
 
 
     const handleClickRandomButton = () => {
@@ -282,6 +297,8 @@ const App: any = () => {
         resetRandomDice()
         calculateScore()
         calculateTotalScore()
+
+        nextPlayer()
     }
 
     const handleClickRandomDice = (num: number, randomDiceIndex: number) => {
@@ -316,6 +333,9 @@ const App: any = () => {
                     display: "flex",
                     flexDirection: "column"
                 })}>
+                    <p>nowTurn: {nowTurn} / 12</p>
+
+                    <button onClick={handleClickAddPlayerButton}>Add Player</button>
 
                     <p>pick:</p>
                     <div css={css({
