@@ -11,8 +11,8 @@ type ScoreBoxType = {
 function ScoreBox({ number, onClick }: ScoreBoxType) {
     return (
         <div onClick={onClick} css={css({
-            minWidth: "3rem",
-            height: "4rem",
+            minWidth: "5rem",
+            height: "2rem",
             backgroundColor: "#474655",
             display: "flex",
             alignItems: "center",

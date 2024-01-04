@@ -13,7 +13,10 @@ const App: any = () => {
     const [nowPlayer, setNowPlayer] = useState(0)
     const [randomDice, setRandomDice] = useState<number[]>([])
     const [playerScore, setPlayerScore] = useState<any>([])
+    const [playerTotalScore, setPlayerTotalScore] = useState([])
+
     const [playerDice, setPlayerDice] = useState([])
+    const [scoreTitleArray, setScoreTitleArray] = useState(["aces", "deuces", "threes", "fours", "fives", "sixes", "bonus", "choice", "fullhouse", "fourofakind", "sstraight", "lstraight", "yacht"])
 
     const getRandomNumber = () => {
         return 1 + Math.floor(Math.random() * 6)
@@ -28,7 +31,6 @@ const App: any = () => {
     }
 
     const initPlayerScore = () => {
-        const scoreTitleArray = ["aces", "deuces", "threes", "fours", "fives", "sixes", "bonus", "choice", "fullhouse", "fourofakind", "sstraight", "lstraight", "yacht"]
         const tempScore: any = {}
         const tempDice: any = {
             pick: [0,0,0,0,0],
@@ -44,6 +46,7 @@ const App: any = () => {
 
         setPlayerScore([...playerScore, tempScore])
         setPlayerDice([...playerDice, tempDice])
+        setPlayerTotalScore([...playerTotalScore, 0])
     }
 
     const appendNumberInPlayerDice = (num: number) => {
@@ -65,9 +68,11 @@ const App: any = () => {
     }
 
     const appendScore = (score: number, key: string) => {
-        playerScore[nowPlayer][key].score = score
-        playerScore[nowPlayer][key].enable = false
+        if (playerScore[nowPlayer][key].enable == false) {
+            return false
+        }
 
+        playerScore[nowPlayer][key].score = score
     }
 
     const getTopCategoriesScore = (num: number) => {
@@ -76,9 +81,14 @@ const App: any = () => {
         return score
     }
 
+    const resetRandomDice = () => {
+        playerDice[nowPlayer].pick = [0,0,0,0,0]
+        setRandomDice([])
+    }
+
     const calculateScore = () => {
         const pickDices = playerDice[nowPlayer].pick
-        const categories = ["aces", "deuces", "threes", "fours", "fives", "sixes", "bonus", "choice", "fourofakind", "fullhouse", "sstraight", "lstraight", "yacht"]
+        // const categories = ["aces", "deuces", "threes", "fours", "fives", "sixes", "bonus", "choice", "fourofakind", "fullhouse", "sstraight", "lstraight", "yacht"]
         // ["aces", "deuces", "threes", "fours", "fives", "sixes", "bonus", "choice", "fullhouse", "fourofakind", "sstraight", "lstraight", "yacht"]
 
         const calculate: any = {
@@ -204,10 +214,14 @@ const App: any = () => {
             "yacht": (title: string) => {
                 let isYacht = true
                 for (let index = 0; index < pickDices.length; index++) {
+                    if (pickDices[index] == 0) {
+                        isYacht = false
+                    }
                     if (pickDices[index] != 0) {
                         if (pickDices[0] != pickDices[index]) {
                             isYacht = false
                         }
+
                     }
                 }
                 const score = isYacht ? 50 : 0
@@ -215,16 +229,41 @@ const App: any = () => {
             },
         }
 
-        for (let index = 0; index < categories.length; index++) {
-            const title = categories[index]
+        for (let index = 0; index < scoreTitleArray.length; index++) {
+            const title = scoreTitleArray[index]
             calculate[title](title)
 
         }
     }
 
 
+    const calculateTotalScore = () => {
+        for (let index = 0; index < playerScore.length; index++) {
+            let count = 0
+            console.log(playerScore[index])
+
+            for (const key in playerScore[index]) {
+                if (Object.prototype.hasOwnProperty.call(playerScore[index], key)) {
+                    if (playerScore[index][key].enable == false) {
+                        count += playerScore[index][key].score
+                    }                    
+                }
+            }
+
+            playerTotalScore[index] = count
+        }
+        
+        console.log("playerTotalScore", playerTotalScore)
+        setPlayerTotalScore([...playerTotalScore])
+    }
+
+
 
     const handleClickRandomButton = () => {
+        if (playerDice[nowPlayer].round >= 3) {
+            return false
+        }
+
         const diceLength = playerDice[nowPlayer].pick.filter((x: number) => x == 0).length
         const random = getRandomArray(diceLength)
         setRandomDice(random)
@@ -232,8 +271,17 @@ const App: any = () => {
 
     }
 
-    const handleClickScoreBox = (title: any) => {
-        console.log(title)
+    const handleClickScoreBox = (score: number, key: any) => {
+        if (playerScore[nowPlayer][key].enable == false) {
+            return false
+        }
+
+        playerScore[nowPlayer][key].score = score
+        playerScore[nowPlayer][key].enable = false
+        playerDice[nowPlayer].round = 0
+        resetRandomDice()
+        calculateScore()
+        calculateTotalScore()
     }
 
     const handleClickRandomDice = (num: number, randomDiceIndex: number) => {
@@ -306,20 +354,33 @@ const App: any = () => {
 
                     <div css={css({
                         display: "flex",
-                        flexDirection: "column"
+                        flexDirection: "row"
                     })}>
+
+                        <div css={css({
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "0.5rem"
+                        })}>
+                            {scoreTitleArray.map((item: string) => (
+                                <p css={css({ margin: '0.42rem', textAlign: "end" })}>{item}</p>
+                            ))}
+                        </div>
                         {playerScore.map((el: any, index: any) => (
                             <div css={css({
                                 display: "flex",
                                 flexDirection: "column",
-                                gap: "1rem"
+                                gap: "0.5rem"
                             })}>
                                 {Object.keys(el).map(key => ({
                                     key: key,
                                     ...el[key]
                                 })).map(score => (
-                                    <ScoreBox number={score.score} onClick={() => handleClickScoreBox(score.key)}></ScoreBox>
+                                    <ScoreBox number={score.score} onClick={() => handleClickScoreBox(score.score, score.key)}></ScoreBox>
                                 ))}
+
+                                <p>{playerTotalScore[index]}</p>
+
                             </div>
                         ))}
 
